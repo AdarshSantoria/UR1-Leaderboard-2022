@@ -1,86 +1,108 @@
-var express = require("express");
-var bodyParser = require("body-parser");
-var path = require("path");
-var XLSX = require("xlsx");
-const axios = require('axios');
-const https = require("https");
-axios.defaults.timeout = 60000;
-axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
-const cheerio = require('cheerio');
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Beecrowd Challenge Rankings 2024</title>
 
-var wb = XLSX.readFile("./responses.xlsx");
-var sheetlist = wb.SheetNames;
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.18.1/dist/bootstrap-table.min.css">
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+  </head>
+  <body>
+    <div class="container">
+        <h1>IIT Mandi Beecrowd Challenge Rankings 2024</h1>
+        <!-- <p>Updates every hour.</p> -->
+        <p>Final Result</p>
+        <p>If your name is not shown in this list, register <a target="_blank" href="https://docs.google.com/forms/d/e/1FAIpQLSfF56DWOAw0eY3GFJEjd4GkJZPXZL-e7o_mestOxd2E1EXaUA/viewform">here.</a></p>
+        
+        <div id="toolbar">
+            <select class="form-control">
+                    <option value="">All Branches</option>
+                    <option value="ME">ME</option>
+                    <option value="CSE">CSE</option>
+                    <option value="BioE">BioE</option>
+                    <option value="EP">EP</option>
+                    <option value="CE">CE</option>
+                    <option value="EE">EE</option>
+                    <option value="DSE">DSE</option>
+                    <option value="MnC">MnC</option>
+                    <option value="VLSI">VLSI</option>
+                    <option value="GE">GE</option>
+                    <option value="MSE">MSE</option>
+                    <option value="CS">CS</option>
+            </select>
+        </div>
+        
+        <table id="table" 
+                    data-toggle="table"
+                    data-search="true"
+                    data-filter-control="true"
+                    data-toolbar="#toolbar">
+            <thead>
+                <tr>
+                    <th data-field="serial" data-sortable="true">Rank</th>
+                    <th data-field="name"  data-sortable="false">Name</th>
+                    <th data-field="branch" data-filter-control="select">Branch</th>
+                    <th data-field="roll" data-sortable="true">Roll No.</th>
+                    <th data-field="score" data-sortable="true">Points</th>
+                    <th data-sortable="true"> Pre Points</th>
+                    <th data-field="change">Change (in 24h)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% for(var i=0; i<data.length; i++) {%>
+                    <tr>
+                        <td><%= data[i].rank %></td>
+                        <td>
+                            <% if (data[i].rank<=5) { %>
+                                <i class="fas fa-medal bold-gold"></i>
+                            <% } else if (data[i].rank<=10){ %>
+                                <i class="fas fa-medal bold-silver"></i>
+                            <% } else if (data[i].rank<=15){ %>
+                                <i class="fas fa-medal bold-bronze"></i>
+                            <% } %>
+                            <a target="_blank" href="<%= data[i].profile %>">
+                                <%= data[i].name %>
+                            </a>
+                        </td>
+                        <td><%= data[i].branch %></td>
+                        <td><%= data[i].roll %></td>
+                        <td><%= data[i].points %></td>
+                        <td><%= data[i].pre_points %></td>
+                        <% if (data[i].change) { %>
+                            <td class="bold-green">+ <%= data[i].change %></td>    
+                        <% } else { %>
+                            <td></td>
+                        <% } %>
+                    </tr>
+                <% } %> 
+            </tbody>
+        </table>
+    </div>
+    <p class="footer-heart">
+        Made with <g-emoji class="g-emoji" alias="heart" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2764.png">
+        <img class="emoji" alt="heart" height="20" width="20" src="https://github.githubassets.com/images/icons/emoji/unicode/2764.png"></g-emoji> by <a target="_blank" href="https://github.com/KamandPrompt">KamandPrompt</a>
+    </p>
 
-Array.prototype.push_with_limit = function(element, limit) {
-    var length = this.length;
-    if (length == limit){
-        this.shift();
-    }
-    this.push(element);
-}
-
-var URIdata = []
-var oldURIdata = [];
-
-var app = express();
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
-app.use(bodyParser.json({ limit: "30MB", extended: true }));
-app.use(bodyParser.urlencoded({ limit: "30MB", extended: true }));
-app.engine("html", require("ejs").renderFile);
-app.use(express.static(path.join(__dirname, "public")));
-
-
-app.use("/", async (req, res) => {
-    res.render("index", {
-        data: URIdata
-    });
-});
-
-const fetchDetails = () => {
-    URIdata = XLSX.utils.sheet_to_json(wb.Sheets[sheetlist[0]]);
-    const promiseArr = [];
-    for(let i=0; i<URIdata.length; i++) {
-        promiseArr[i] = axios.get(URIdata[i]["profile"]);
-    }
-    Promise.all(promiseArr)
-    .then((response) => {
-        for(let i=0; i<URIdata.length; i++) {
-            const $ = cheerio.load(response[i].data);
-            var points = $(".pb-information > li:nth-child(5)").html();
-            if (points) {
-                points = points.split("\n")[2].trim() ;
-            } else {
-                points = "0.00";
-            }
-            URIdata[i]["points"] = (parseFloat(parseFloat(points.replace(/,/g, '')) - parseFloat(URIdata[i]["pre_points"]))).toFixed(4);
-        }
-        URIdata.sort((a,b) => b.points - a.points);
-        URIdata.forEach((obj, i) => obj.rank = i+1);
-        if (oldURIdata.length > 0) {
-            const oldData = oldURIdata[0];
-            URIdata.forEach((obj, i) => {
-                oldData.forEach((oldobj, oldi) => {
-                    if (obj.roll == oldobj.roll && obj.points != oldobj.points) {
-                        obj.change = (obj.points - oldobj.points).toFixed(2);
-                    }
-                });
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js" integrity="sha512-bLT0Qm9VnAYZDflyKcBaQ2gg0hSYNQrJ8RilYldYQ1FxQYoCLtUjuuRuZo+fjqhx/qtq/1itJ0C2ejDxltZVFg==" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/bootstrap-table@1.18.1/dist/bootstrap-table.min.js"></script>
+    <script>
+        //exporte les données sélectionnées
+        var $table = $('#table');
+        $(function () {
+            $('#toolbar').find('select').change(function () {
+                var filter = { branch: $(this).val() };
+                if ($(this).val() == "") {
+                    filter = {};
+                }
+                $table.bootstrapTable('filterBy', filter);
             });
-        }
-        oldURIdata.push_with_limit(URIdata, 24);
-    })
-    .catch( (err)=> {
-        console.log(err);
-    });
-    // console.log(URIdata)
-}
-
-fetchDetails();
-// setInterval(fetchDetails, 1000 * 60*60);
-
-exports = module.exports = app;
-
-var port = process.env.PORT || 3000;
-app.listen(port, function () {
-    console.log("Server started at: http://localhost:" + String(port) + "/");
-});
+        });
+    </script>
+    </body> 
+</html>
