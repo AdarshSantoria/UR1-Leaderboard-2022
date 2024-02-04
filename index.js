@@ -28,7 +28,7 @@ app.use(bodyParser.urlencoded({ limit: "30MB", extended: true }));
 app.engine("html", require("ejs").renderFile);
 app.use(express.static(path.join(__dirname, "public")));
 
-const client = new ZenRows("94d4ffa1ab4f4a8ffc52dd197223fa950c52b344");
+const client = new ZenRows("22100055042c579f77270375811191423591381c");
 
 app.use("/", async (req, res) => {
     res.render("index", {
