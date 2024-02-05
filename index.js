@@ -2,15 +2,16 @@ var express = require("express");
 var bodyParser = require("body-parser");
 var path = require("path");
 var XLSX = require("xlsx");
+const https = require("https");
 const cheerio = require('cheerio');
-const request = require('request');
+const { ZenRows } = require("zenrows");
 
 var wb = XLSX.readFile("./responses.xlsx");
 var sheetlist = wb.SheetNames;
 
-Array.prototype.push_with_limit = function (element, limit) {
+Array.prototype.push_with_limit = function(element, limit) {
     var length = this.length;
-    if (length == limit) {
+    if (length == limit){
         this.shift();
     }
     this.push(element);
@@ -27,6 +28,8 @@ app.use(bodyParser.urlencoded({ limit: "30MB", extended: true }));
 app.engine("html", require("ejs").renderFile);
 app.use(express.static(path.join(__dirname, "public")));
 
+const client = new ZenRows("b35c436b3207a3858744783a757ed1e331a58ea7");
+
 app.use("/", async (req, res) => {
     res.render("index", {
         data: URIdata
@@ -38,26 +41,18 @@ const fetchDetails = async () => {
         URIdata = XLSX.utils.sheet_to_json(wb.Sheets[sheetlist[0]]);
         const promiseArr = [];
 
-        for (let i = 0; i < URIdata.length; i++) {
-            promiseArr[i] = new Promise((resolve, reject) => {
-                request.get(URIdata[i]["profile"], (error, response, body) => {
-                    if (error) {
-                        reject(error);
-                    } else {
-                        resolve({ data: body });
-                    }
-                });
-            });
+        for(let i=0; i<URIdata.length; i++) {
+            promiseArr[i] = client.get(URIdata[i]["profile"], {});
         }
 
         const responses = await Promise.all(promiseArr);
 
-        for (let i = 0; i < URIdata.length; i++) {
+        for(let i=0; i<URIdata.length; i++) {
             const $ = cheerio.load(responses[i].data);
             var points = $(".pb-information > li:nth-child(5)").html();
 
             if (points) {
-                points = points.split("\n")[2].trim();
+                points = points.split("\n")[2].trim() ;
             } else {
                 points = "0.00";
             }
@@ -65,8 +60,8 @@ const fetchDetails = async () => {
             URIdata[i]["points"] = (parseFloat(parseFloat(points.replace(/,/g, '')) - parseFloat(URIdata[i]["pre_points"]))).toFixed(4);
         }
 
-        URIdata.sort((a, b) => b.points - a.points);
-        URIdata.forEach((obj, i) => obj.rank = i + 1);
+        URIdata.sort((a,b) => b.points - a.points);
+        URIdata.forEach((obj, i) => obj.rank = i+1);
 
         if (oldURIdata.length > 0) {
             const oldData = oldURIdata[0];
@@ -81,11 +76,12 @@ const fetchDetails = async () => {
 
         oldURIdata.push_with_limit(URIdata, 24);
     } catch (err) {
-        console.error("Error fetching details:", err);
+        console.log(err);
     }
 }
 
 fetchDetails();
+// setInterval(fetchDetails, 1000 * 60*60);
 
 exports = module.exports = app;
 
