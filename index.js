@@ -30,6 +30,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const client = new ZenRows("a4e060c71224638431902d7b25f89a4b5e30a1e9");
 
+
 app.use("/", async (req, res) => {
     res.render("index", {
         data: URIdata
