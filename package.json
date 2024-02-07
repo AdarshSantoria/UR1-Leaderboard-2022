@@ -1,7 +1,7 @@
 {
   "name": "cheeriojsdemo",
   "version": "1.0.0",
-  "description": "Demo of using cheeriojs ",
+  "description": "Demo of using cheeriojs",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
