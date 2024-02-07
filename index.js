@@ -4,6 +4,7 @@ var path = require("path");
 var XLSX = require("xlsx");
 const https = require("https");
 const cheerio = require('cheerio');
+// const fetch = require('node-fetch');
 const { ZenRows } = require("zenrows");
 
 var wb = XLSX.readFile("./responses.xlsx");
