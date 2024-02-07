@@ -28,8 +28,7 @@ app.use(bodyParser.urlencoded({ limit: "30MB", extended: true }));
 app.engine("html", require("ejs").renderFile);
 app.use(express.static(path.join(__dirname, "public")));
 
-const client = new ZenRows("a4e060c71224638431902d7b25f89a4b5e30a1e9");
-
+const client = new ZenRows("b35c436b3207a3858744783a757ed1e331a58ea7");
 
 app.use("/", async (req, res) => {
     res.render("index", {
@@ -43,13 +42,16 @@ const fetchDetails = async () => {
         const promiseArr = [];
 
         for(let i=0; i<URIdata.length; i++) {
-            promiseArr[i] = client.get(URIdata[i]["profile"], {});
+            // Using Fetch API to make requests
+            promiseArr[i] = fetch(URIdata[i]["profile"])
+                                .then(response => response.text())
+                                .catch(error => console.error('Error fetching data:', error));
         }
 
         const responses = await Promise.all(promiseArr);
 
         for(let i=0; i<URIdata.length; i++) {
-            const $ = cheerio.load(responses[i].data);
+            const $ = cheerio.load(responses[i]);
             var points = $(".pb-information > li:nth-child(5)").html();
 
             if (points) {
