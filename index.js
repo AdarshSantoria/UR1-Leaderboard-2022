@@ -4,6 +4,7 @@ var path = require("path");
 var XLSX = require("xlsx");
 const https = require("https");
 const cheerio = require('cheerio');
+const { ZenRows } = require("zenrows");
 
 var wb = XLSX.readFile("./responses.xlsx");
 var sheetlist = wb.SheetNames;
@@ -26,6 +27,8 @@ app.use(bodyParser.json({ limit: "30MB", extended: true }));
 app.use(bodyParser.urlencoded({ limit: "30MB", extended: true }));
 app.engine("html", require("ejs").renderFile);
 app.use(express.static(path.join(__dirname, "public")));
+
+const client = new ZenRows("b35c436b3207a3858744783a757ed1e331a58ea7");
 
 app.use("/", async (req, res) => {
     res.render("index", {
